@@ -5,7 +5,7 @@
 int main()
 {
     //#ifdef _OPENMP
-    #pragma omp parallel num_threads(4)
+    #pragma omp parallel num_threads(8)
     {
         printf("Hello World from processor: %d\n", omp_get_thread_num());
     }
