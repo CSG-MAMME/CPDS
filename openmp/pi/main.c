@@ -18,14 +18,15 @@ int main()
     time_start = omp_get_wtime();
     step = 1.0 / (double) num_steps;
     omp_set_num_threads(NUM_THREADS);
-    #pragma omp parallel private(x, i, id)
+    //#pragma omp parallel private(x, i, id)
+    #pragma omp parallel private(x, i, id) reduction(+:sum)
     {
         id = omp_get_thread_num();
         for (i = id + 1; i <= num_steps; i = i + NUM_THREADS)
         {
             x = (i - 0.5) * step;
-            #pragma omp atomic
             //#pragma omp critical
+            //#pragma omp atomic
             sum += 4.0 / (1.0 + x*x);
         }
     }
