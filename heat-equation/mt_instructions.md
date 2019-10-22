@@ -1,4 +1,6 @@
-### Copy tar File from cpds92001
+### Copy tar File from cpds92000
+
+Instructions for MT: bsc.es/user-support/mt.php
 
 + Part2 -> OpenMP
 + Part3 -> MPI
@@ -17,3 +19,5 @@
     - As a consequence, we must introduce certain thread synchronizations (explicit)
     - Either flush (slide 43)
     - Or using the task model (with dependencies)
+
+PW: nd772m.005
