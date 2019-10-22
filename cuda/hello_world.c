@@ -6,22 +6,22 @@ __global__ void hello_world()
 }
 
 int main()
+{
+    int num_devices;
+    cudaGetDeviceCount(&num_devices);
+
+    unsigned int d;
+    for (d = 0; d < num_devices; d++)
     {
-        int num_devices;
-        cudaGetDeviceCount(&num_devices);
+        cudaSetDevice(d);
+        hello_world<<<1,1>>>();
+    }
 
-        unsigned int d;
-        for (d = 0; d < num_devices; d++)
-        {
-            cudaSetDevice(d);
-            hello_world<<<1,1>>>();
-        }
+    for (d = 0; d < num_devices; d++)
+    {
+        cudaSetDevice(d);
+        cudaThreadSynchronize();
+    } 
 
-        for (d = 0; d < num_devices; d++)
-        {
-            cudaSetDevice(d);
-            cudaThreadSynchronize();
-        } 
-
-        return 0;
+    return 0;
 }
