@@ -1,0 +1,4 @@
+heat-mpi1.c: initial MPI version with workers replicating computation
+heat-mpi2.c: MPI version in which workers allocate all matrix (global addressing)
+heat-mpi3.c: MPI version in which worker just allocate the memory necessary (local addressing)
+heat-mpi4.c: idem but using Reduce and Bcast instead of Allreduce
