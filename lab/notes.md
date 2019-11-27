@@ -35,10 +35,15 @@
     + I know I could use Sendrcv but it was messy for me.
     + **Can't run with 8 processors! More processors than permitted**
     + I assumed Gauss-Seidel was not necessary (Tareador and stuff) although it should not be difficult.
+2. Gauss:
+    + Initially, well implemented but not speeding up.
+    + **I feel that this is because we do an Allreduce with the global residual, PER ITERATION, hence we can not be at different iterations speeding up computation!!**
+    + At the same time, if not all of them finish at the same time we can get stuck.
+    + **Can't solve it :-(**
 
 **Part 4**
 + I commented out the module extrae to load the software since it was giving problems, and we don't use it.
 + Changing the launcher aswell. Can't get it to work:
     - error while loading shared libraries: libcudart.so.4 
 + **Can't run!**
-+ **Missing the shared memory thing!**
++ **Missing the shared memory thing!** -> Doubts
