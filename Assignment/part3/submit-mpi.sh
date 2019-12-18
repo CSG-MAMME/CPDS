@@ -10,6 +10,6 @@
 	# @ wall_clock_limit	= 00:02:00
 
 prog=heatmpi
-procs=4
+procs=1
 
 srun -n $procs ./$prog test.dat

@@ -107,10 +107,6 @@ int main( int argc, char *argv[] )
                 MPI_Send(&param.maxiter, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 MPI_Send(&param.resolution, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 MPI_Send(&param.algorithm, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
-                //MPI_Send(&param.u[0], (np)*(np), MPI_DOUBLE, i, 0,
-                //         MPI_COMM_WORLD);
-                //MPI_Send(&param.uhelp[0], (np)*(np), MPI_DOUBLE, i, 0, 
-                //         MPI_COMM_WORLD);
                 // CSG: Send the right data to everyone
                 fprintf(stderr, "Master Distributing: %d\n", i);
                 fprintf(stderr, "Accessing Value: %d\n", myrows * np * i);
@@ -149,16 +145,12 @@ int main( int argc, char *argv[] )
                 residual = relax_redblack(param.u, np, np);
                 break;
             case 2: // GAUSS
-                // CSG: In this case, no need to recv before computin,
-                // first row is dependency free.
-                residual = relax_gauss(param.u, myrows + 2, np);
+                residual = relax_gauss_parallel(param.u, myrows + 2, np,
+                                                iter);
+                // CSG: Sanity check, we are not the only process.
                 if (myid != numprocs -1)
-                {
-                    MPI_Send(&param.u[myrows * np], np, MPI_DOUBLE, myid + 1,
-                             iter, MPI_COMM_WORLD);
                     MPI_Recv(&param.u[(myrows + 1) * np], np, MPI_DOUBLE,
                              myid + 1, iter, MPI_COMM_WORLD, &status);
-                }
                 break;
             }
 
@@ -175,13 +167,6 @@ int main( int argc, char *argv[] )
                     MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE,
                                   MPI_SUM, MPI_COMM_WORLD);
                     break;
-                //case 2: // CSG: Broken version
-                //
-                //    MPI_Reduce(&residual, &global_residual, 1, MPI_DOUBLE,
-                //                  MPI_SUM, 0, MPI_COMM_WORLD);
-                //    MPI_Bcast(&global_residual, 1, MPI_DOUBLE, 0,
-                //              MPI_COMM_WORLD);
-                //    break;
                 default:
                     global_residual = residual;
                     break;
@@ -256,8 +241,8 @@ int main( int argc, char *argv[] )
 
         // allocate memory for worker
         // CSG: Modifying rows, we also alter the memory we allocate.
-        double *u = calloc(sizeof(double), (myrows + 2) * np);
-        double *uhelp = calloc(sizeof(double), (myrows + 2) * np);
+        double *u = calloc((myrows + 2) * np, sizeof(double));
+        double *uhelp = calloc((myrows + 2) * np, sizeof(double));
         if( (!u) || (!uhelp) )
         {
             fprintf(stderr, "Error: Cannot allocate memory\n");
@@ -304,37 +289,20 @@ int main( int argc, char *argv[] )
                 residual = relax_redblack(u, np, np);
                 break;
             case 2: // GAUSS
-                // CSG: The main difference here is that given that we, 
-                // EXPLICITLY modify u at each iteration. We must receive the
-                // freshest values of u.
-                // CSG: This means, the upper boundry computed at this round,
-                // and the lower in the previous (next block will be computed
-                // strictly after).
-                MPI_Recv(&u[0], np, MPI_DOUBLE, myid - 1, iter,
-                         MPI_COMM_WORLD, &status);
-                // CSG: receiving from a previous iteration, enables us to
-                // cascade parallelism.
-                if (iter > 0 && myid != numprocs - 1)
-                {
-                    MPI_Recv(&u[(myrows + 1) * np], np, MPI_DOUBLE, myid + 1,
-                             iter - 1, MPI_COMM_WORLD, &status);
-                }
-                // CSG: Now we can update the values of our u chunk.
-                residual = relax_gauss(u, myrows + 2, np);
-                // CSG: Now we need to send the new results down.
-                // CSG: It is important to send down first to prevent deadlocks.
+                // CSG: Values are sent down in a per-block fashion inside
+                // the solver.
+                residual = relax_gauss_parallel(u, myrows + 2, np, iter);
+                // CSG: Once we finish, we send our first row up to let
+                // the previous process start next iteration.
+                MPI_Send(&u[0], np, MPI_DOUBLE, myid - 1, iter,
+                         MPI_COMM_WORLD);
                 if (myid != numprocs - 1)
                 {
-                    MPI_Send(&u[myrows * np], np, MPI_DOUBLE, myid + 1, iter,
-                             MPI_COMM_WORLD);
+                    MPI_Recv(&u[(myrows + 1) * np], np, MPI_DOUBLE, myid + 1,
+                             iter, MPI_COMM_WORLD, &status);
                 }
-                // CSG: and upwards for the next round (we receive them
-                // at iteration iter + 1).
-                MPI_Send(&u[np], np, MPI_DOUBLE, myid - 1, iter,
-                         MPI_COMM_WORLD);
                 break;
             }
-
             iter++;
 
             // CSG: Global Residual only for Jacobi?
@@ -345,12 +313,6 @@ int main( int argc, char *argv[] )
                     MPI_Allreduce(&residual, &global_residual, 1, MPI_DOUBLE,
                                   MPI_SUM, MPI_COMM_WORLD);
                     break;
-//                case 2: // Gauss
-//                    MPI_Send(&residual, 1, MPI_DOUBLE, 0, myid,
-//                             MPI_COMM_WORLD);
-//                    MPI_Bcast(&global_residual, 1, MPI_DOUBLE, 0,
-//                              MPI_COMM_WORLD);
-//                    break;
                 default:
                     global_residual = residual;
                     break;

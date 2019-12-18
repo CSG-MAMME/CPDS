@@ -62,6 +62,9 @@ double relax_redblack (double *u, unsigned sizex, unsigned sizey)
     by = sizey/nby;
     // CSG: This is working well as it is, but could we merge both loops?
     // Computing "Red" blocks
+    // CSG: one or two parallel regions? 
+    // one pragma omp parallel and two fors
+    // CSG: nowait or not
     #pragma omp parallel for reduction(+:sum) private(diff, unew, lsw)
     for (int ii=0; ii<nbx; ii++) {
         lsw = ii%2;
@@ -145,7 +148,6 @@ double relax_gauss (double *u, unsigned sizex, unsigned sizey)
                             }
                         }
                     }
-                    block[ii * nbx + jj] = 1;
                 }
             }
             else if (ii > 0)
@@ -169,7 +171,6 @@ double relax_gauss (double *u, unsigned sizex, unsigned sizey)
                             }
                         }
                     }
-                    block[ii * nbx + jj] = 1;
                 }
             }
             else if (jj > 0)
@@ -193,7 +194,6 @@ double relax_gauss (double *u, unsigned sizex, unsigned sizey)
                             }
                         }
                     }
-                    block[ii * nbx + jj] = 1;
                 }
             }
             else 
@@ -216,7 +216,6 @@ double relax_gauss (double *u, unsigned sizex, unsigned sizey)
                             }
                         }
                     }
-                    block[ii * nbx + jj] = 1;
                 }
             }
         }
