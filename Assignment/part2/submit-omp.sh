@@ -15,5 +15,5 @@ while (test $n_threads -le $MAX_THREADS)
   do
 	export OMP_NUM_THREADS=$n_threads
 	srun ./$executable test.dat
-        n_threads=`expr $n_threads * 2`
+    n_threads=`expr $n_threads \* 2`
   done

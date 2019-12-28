@@ -110,7 +110,7 @@ double relax_gauss (double *u, unsigned sizex, unsigned sizey)
     int nbx, bx, nby, by;
     // CSG: Define auxiliary block to compute and keep track of dependencies
     int *block;
-    block = (int *)calloc(NB * NB, sizeof(int));
+    block = (int *) calloc(NB * NB, sizeof(int));
 
     nbx = NB;
     bx = sizex/nbx;
