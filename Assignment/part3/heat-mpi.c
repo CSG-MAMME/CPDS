@@ -25,11 +25,10 @@ int main( int argc, char *argv[] )
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-    fprintf(stderr, "Hello error\n");
 
     if (myid == 0) 
     {
-        printf("I am the master (%d) and going to distribute work to %d additional workers ...\n", myid, numprocs-1);
+        //printf("I am the master (%d) and going to distribute work to %d additional workers ...\n", myid, numprocs-1);
 
         // algorithmic parameters
         algoparam_t param;
@@ -89,12 +88,10 @@ int main( int argc, char *argv[] )
                 return 1;
         }
 
-        fprintf(stderr, "Master Initialized\n");
         // full size (param.resolution are only the inner points)
         np = param.resolution + 2;
         // CSG: Define these two helper parameters
         myrows = param.resolution / numprocs;
-        fprintf(stderr, "np: %i myrows: %i\n", np, myrows);
         
         // starting time
         runtime = wtime();
@@ -108,16 +105,12 @@ int main( int argc, char *argv[] )
                 MPI_Send(&param.resolution, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 MPI_Send(&param.algorithm, 1, MPI_INT, i, 0, MPI_COMM_WORLD);
                 // CSG: Send the right data to everyone
-                fprintf(stderr, "Master Distributing: %d\n", i);
-                fprintf(stderr, "Accessing Value: %d\n", myrows * np * i);
                 MPI_Send(&param.u[myrows * np * i], (myrows + 2) * (np),
                          MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
                 MPI_Send(&param.uhelp[myrows * np * i], (myrows + 2) * (np),
                          MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
             }
         }
-
-        fprintf(stderr, "Master Distributed\n");
 
         iter = 0;
         while(1) {
@@ -193,12 +186,12 @@ int main( int argc, char *argv[] )
         // stopping time
         runtime = wtime() - runtime;
 
-        fprintf(stdout, "Time: %04.3f ", runtime);
-        fprintf(stdout, "(%3.3f GFlop => %6.2f MFlop/s)\n", 
-                flop/1000000000.0,
-                flop/runtime/1000000);
-        fprintf(stdout, "Convergence to residual=%f: %d iterations\n",
-                global_residual, iter);
+        fprintf(stdout, "Time: %04.3f \n", runtime);
+//        fprintf(stdout, "(%3.3f GFlop => %6.2f MFlop/s)\n", 
+//                flop/1000000000.0,
+//                flop/runtime/1000000);
+//        fprintf(stdout, "Convergence to residual=%f: %d iterations\n",
+//                global_residual, iter);
 
         // for plot...
         coarsen( param.u, np, np,
@@ -210,13 +203,13 @@ int main( int argc, char *argv[] )
 
         finalize( &param );
 
-        fprintf(stdout, "Process %d finished computing with residual value = %f\n", myid, residual);
+        //fprintf(stdout, "Process %d finished computing with residual value = %f\n", myid, residual);
 
         MPI_Finalize();
 
         return 0;
     } else {
-        printf("I am worker %d and ready to receive work to do ...\n", myid);
+        //printf("I am worker %d and ready to receive work to do ...\n", myid);
 
         // receive information from master to perform computation locally
 
@@ -229,7 +222,7 @@ int main( int argc, char *argv[] )
         MPI_Recv(&maxiter, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
         MPI_Recv(&columns, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
         MPI_Recv(&algorithm, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, &status);
-        printf("Worker %d alive!\n", myid);
+        //printf("Worker %d alive!\n", myid);
 
         // CSG: we modify the rows to be resolution/numprocs
         // rows = columns;
@@ -262,7 +255,6 @@ int main( int argc, char *argv[] )
                 // CSG: We need to change the sizex to match new resolution
                 residual = relax_jacobi(u, uhelp, myrows + 2, np);
                 // Copy uhelp into u
-                // CSG: This was a tricky one to catch
                 for (int i = 0; i < (myrows + 2); i++)
                     for (int j = 0; j < np; j++)
                         u[i * np + j] = uhelp[i * np + j];
@@ -292,10 +284,13 @@ int main( int argc, char *argv[] )
                 // CSG: Values are sent down in a per-block fashion inside
                 // the solver.
                 residual = relax_gauss_parallel(u, myrows + 2, np, iter);
-                // CSG: Once we finish, we send our first row up to let
-                // the previous process start next iteration.
-                MPI_Send(&u[0], np, MPI_DOUBLE, myid - 1, iter,
-                         MPI_COMM_WORLD);
+                // CSG: Once we finish, we send our (whole) first row up. 
+                if (myid != 0)
+                {
+                    MPI_Send(&u[0], np, MPI_DOUBLE, myid - 1, iter,
+                             MPI_COMM_WORLD);
+                }
+                // CSG: And we wait to receive from the next process.
                 if (myid != numprocs - 1)
                 {
                     MPI_Recv(&u[(myrows + 1) * np], np, MPI_DOUBLE, myid + 1,
@@ -305,7 +300,7 @@ int main( int argc, char *argv[] )
             }
             iter++;
 
-            // CSG: Global Residual only for Jacobi?
+            // CSG: Global residual is a necessar sync. point for both solvers
             switch  (algorithm)
             {
                 case 0: // Jacobi
@@ -326,13 +321,12 @@ int main( int argc, char *argv[] )
         }
 
         // Send results back to master
-        fprintf(stderr, "Worker %d sent results %i\n", myid, iter);
         MPI_Send(&u[np], myrows * np, MPI_DOUBLE, 0, maxiter + 1,
                  MPI_COMM_WORLD);
 
         if( u ) free(u); if( uhelp ) free(uhelp);
 
-        fprintf(stdout, "Process %d finished computing %d iterations with residual value = %f\n", myid, iter, residual);
+        //fprintf(stdout, "Process %d finished computing %d iterations with residual value = %f\n", myid, iter, residual);
 
         MPI_Finalize();
         exit(0);

@@ -10,6 +10,12 @@
 	# @ wall_clock_limit	= 00:02:00
 
 prog=heatmpi
-procs=2
+procs=1
+max_procs=16
 
-srun -n $procs ./$prog test.dat
+while (test $procs -le $max_procs)
+  do
+    echo "Running with $procs procs."
+    srun -n $procs ./$prog test.dat
+    procs=`expr $procs \* 2`
+  done

@@ -127,9 +127,12 @@ double relax_gauss_parallel (double *u, unsigned sizex, unsigned sizey,
     for (int ii=0; ii<nbx; ii++)
         for (int jj=0; jj<nby; jj++) 
         {
+            // CSG: Reveive the last row of the chunk
             if (myid != 0)
+            {
                 MPI_Recv(&u[jj*by], by, MPI_DOUBLE, myid - 1, iter,
                          MPI_COMM_WORLD, &status);
+            }
             for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
                 for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++)
                 {
@@ -141,6 +144,7 @@ double relax_gauss_parallel (double *u, unsigned sizex, unsigned sizey,
                     sum += diff * diff; 
                     u[i*sizey+j]=unew;
                 }
+            // CSG: Send the last row of the chunk
             if (myid != numprocs -1)
             {
                 MPI_Send(&u[(sizex - 2)*sizey + jj*by], by, MPI_DOUBLE,
