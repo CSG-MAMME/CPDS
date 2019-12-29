@@ -6,6 +6,6 @@
 #export LD_PRELOAD=${EXTRAE_HOME}/lib/libmpitracef.so  # MPI (Fortran-based)
 #export LD_PRELOAD=${EXTRAE_HOME}/lib/libompitrace.so  # MPI+OpenMP (C-based)
 #export LD_PRELOAD=${EXTRAE_HOME}/lib/libompitracef.so # MPI+OpenMP (Fortran-based)
-#export LD_PRELOAD=${EXTRAE_HOME}/lib/libcudatrace.so # CUDA
+export LD_LIBRARY_PATH=/opt/cuda/4.1/lib64/ # CUDA
 
 $@

@@ -15,4 +15,3 @@ heatCUDA: heatCUDA.cu kernels.o
 
 clean:
 	rm -fr $(ALL) *.o *.prv *.err *.out *.pcf *.row *.sym *.mpits set-0
-
