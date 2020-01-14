@@ -108,6 +108,7 @@ double relax_gauss (double *u, unsigned sizex, unsigned sizey)
 {
     double unew, diff, sum=0.0;
     int nbx, bx, nby, by;
+    //int ii,jj;
     // CSG: Define auxiliary block to compute and keep track of dependencies
     int *block;
     block = (int *) calloc(NB * NB, sizeof(int));
@@ -121,98 +122,101 @@ double relax_gauss (double *u, unsigned sizex, unsigned sizey)
     // CSG: To keep track of the dependencies, we make use an auxiliary
     // matrix.
 
-    #pragma omp parallel
-    #pragma omp single
-    for (int ii=0; ii<nbx; ii++)
+    #pragma omp parallel 
     {
-        for (int jj=0; jj<nby; jj++) 
+    #pragma omp single
+    {
+        for (int ii=0; ii<nbx; ii++)
         {
-            if (ii > 0 && jj > 0)
+            for (int jj=0; jj<nby; jj++) 
             {
-                #pragma omp task private(unew, diff) \
-                    depend(in: block[(ii-1)*nbx + jj], block[ii*nbx + (jj-1)]) \
-                    depend(out: block[ii*nbx + jj])
+                if (ii == 0 && jj == 0)
                 {
-                    for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
+                    #pragma omp task private(unew, diff) \
+                        depend(out: block[ii*nbx + jj])
                     {
-                        for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++) 
+                        for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
                         {
+                            for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++) 
                             {
-                                unew= 0.25 * (u[i*sizey + (j-1)] + 
-                                      u[i*sizey + (j+1)] +  
-                                      u[(i-1)*sizey + j] +
-                                      u[(i+1)*sizey + j]);
-                                diff = unew - u[i*sizey+ j];
-                                sum += diff * diff; 
-                                u[i*sizey+j]=unew;
+                                {
+                                    unew= 0.25 * (u[i*sizey + (j-1)] + 
+                                          u[i*sizey + (j+1)] +  
+                                          u[(i-1)*sizey + j] +
+                                          u[(i+1)*sizey + j]);
+                                    diff = unew - u[i*sizey+ j];
+                                    sum += diff * diff; 
+                                    u[i*sizey+j]=unew;
+                                }
                             }
                         }
                     }
                 }
-            }
-            else if (ii > 0)
-            {
-                #pragma omp task private(unew, diff) \
-                    depend(in: block[(ii-1)*nbx + jj]) \
-                    depend(out: block[ii*nbx + jj])
+                else if (jj == 0)
                 {
-                    for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
+                    #pragma omp task private(unew, diff) \
+                        depend(in: block[(ii-1)*nbx + jj]) \
+                        depend(out: block[ii*nbx + jj])
                     {
-                        for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++) 
+                        for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
                         {
+                            for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++) 
                             {
-                                unew= 0.25 * (u[i*sizey + (j-1)] + 
-                                      u[i*sizey + (j+1)] +  
-                                      u[(i-1)*sizey + j] +
-                                      u[(i+1)*sizey + j]);
-                                diff = unew - u[i*sizey+ j];
-                                sum += diff * diff; 
-                                u[i*sizey+j]=unew;
+                                {
+                                    unew= 0.25 * (u[i*sizey + (j-1)] + 
+                                          u[i*sizey + (j+1)] +  
+                                          u[(i-1)*sizey + j] +
+                                          u[(i+1)*sizey + j]);
+                                    diff = unew - u[i*sizey+ j];
+                                    sum += diff * diff; 
+                                    u[i*sizey+j]=unew;
+                                }
                             }
                         }
                     }
                 }
-            }
-            else if (jj > 0)
-            {
-                #pragma omp task private(unew, diff) \
-                    depend(in: block[ii*nbx + (jj-1)]) \
-                    depend(out: block[ii*nbx + jj])
+                else if (ii == 0)
                 {
-                    for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
+                    #pragma omp task private(unew, diff) \
+                        depend(in: block[ii*nbx + (jj-1)]) \
+                        depend(out: block[ii*nbx + jj])
                     {
-                        for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++) 
+                        for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
                         {
+                            for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++) 
                             {
-                                unew= 0.25 * (u[i*sizey + (j-1)] + 
-                                      u[i*sizey + (j+1)] +  
-                                      u[(i-1)*sizey + j] +
-                                      u[(i+1)*sizey + j]);
-                                diff = unew - u[i*sizey+ j];
-                                sum += diff * diff; 
-                                u[i*sizey+j]=unew;
+                                {
+                                    unew= 0.25 * (u[i*sizey + (j-1)] + 
+                                          u[i*sizey + (j+1)] +  
+                                          u[(i-1)*sizey + j] +
+                                          u[(i+1)*sizey + j]);
+                                    diff = unew - u[i*sizey+ j];
+                                    sum += diff * diff; 
+                                    u[i*sizey+j]=unew;
+                                }
                             }
                         }
                     }
                 }
-            }
-            else 
-            {
-                #pragma omp task private(unew, diff) \
-                    depend(out: block[ii*nbx + jj])
+                else 
                 {
-                    for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
+                    #pragma omp task private(unew, diff) \
+                        depend(in: block[(ii-1)*nbx + jj], block[ii*nbx + (jj-1)]) \
+                        depend(out: block[ii*nbx + jj])
                     {
-                        for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++) 
+                        for (int i=1+ii*bx; i<=min((ii+1)*bx, sizex-2); i++) 
                         {
+                            for (int j=1+jj*by; j<=min((jj+1)*by, sizey-2); j++) 
                             {
-                                unew= 0.25 * (u[i*sizey + (j-1)] + 
-                                      u[i*sizey + (j+1)] +  
-                                      u[(i-1)*sizey + j] +
-                                      u[(i+1)*sizey + j]);
-                                diff = unew - u[i*sizey+ j];
-                                sum += diff * diff; 
-                                u[i*sizey+j]=unew;
+                                {
+                                    unew= 0.25 * (u[i*sizey + (j-1)] + 
+                                          u[i*sizey + (j+1)] +  
+                                          u[(i-1)*sizey + j] +
+                                          u[(i+1)*sizey + j]);
+                                    diff = unew - u[i*sizey+ j];
+                                    sum += diff * diff; 
+                                    u[i*sizey+j]=unew;
+                                }
                             }
                         }
                     }
@@ -220,7 +224,8 @@ double relax_gauss (double *u, unsigned sizex, unsigned sizey)
             }
         }
     }
-    //#pragma omp taskwait
+    }
+    free(block);
 
     return sum;
 }

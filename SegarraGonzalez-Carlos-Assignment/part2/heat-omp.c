@@ -1,10 +1,20 @@
 /*
  * Iterative solver for heat distribution
+ * CSG: Initialization script
  */
+
+#ifndef _EXTRAE_
+   #define _EXTRAE_ 0
+#else 
+   #define _EXTRAE_ 1
+#endif
 
 #include <stdio.h>
 #include <stdlib.h>
 #include "heat.h"
+#if _EXTRAE_
+#include "extrae_user_events.h"
+#endif
 
 void usage( char *s )
 {
@@ -28,18 +38,17 @@ int main( int argc, char *argv[] )
     // check arguments
     if( argc < 2 )
     {
-	usage( argv[0] );
-	return 1;
+        usage( argv[0] );
+        return 1;
     }
 
     // check input file
     if( !(infile=fopen(argv[1], "r"))  ) 
     {
-	fprintf(stderr, 
-		"\nError: Cannot open \"%s\" for reading.\n\n", argv[1]);
-      
-	usage(argv[0]);
-	return 1;
+        fprintf(stderr, 
+            "\nError: Cannot open \"%s\" for reading.\n\n", argv[1]);
+        usage(argv[0]);
+        return 1;
     }
 
     // check result file
@@ -47,19 +56,20 @@ int main( int argc, char *argv[] )
 
     if( !(resfile=fopen(resfilename, "w")) )
     {
-	fprintf(stderr, 
-		"\nError: Cannot open \"%s\" for writing.\n\n", 
-		resfilename);
-	usage(argv[0]);
-	return 1;
+        fprintf(stderr, 
+            "\nError: Cannot open \"%s\" for writing.\n\n", 
+            resfilename);
+        usage(argv[0]);
+        return 1;
     }
 
     // check input
+    // CSG: Defined in misc.c
     if( !read_input(infile, &param) )
     {
-	fprintf(stderr, "\nError: Error parsing input file.\n\n");
-	usage(argv[0]);
-	return 1;
+        fprintf(stderr, "\nError: Error parsing input file.\n\n");
+        usage(argv[0]);
+        return 1;
     }
     print_params(&param);
 
@@ -73,10 +83,15 @@ int main( int argc, char *argv[] )
     // full size (param.resolution are only the inner points)
     np = param.resolution + 2;
     
+#if _EXTRAE_
+    Extrae_init();
+#endif
     // starting time
     runtime = wtime();
 
     iter = 0;
+    //int *block;
+    //block = (int *) calloc(np * np, sizeof(int));
     while(1) {
 	switch( param.algorithm ) {
 	    case 0: // JACOBI
@@ -107,6 +122,9 @@ int main( int argc, char *argv[] )
     flop = iter * 11.0 * param.resolution * param.resolution;
     // stopping time
     runtime = wtime() - runtime;
+#if _EXTRAE_
+    Extrae_fini();
+#endif
 
     fprintf(stdout, "Time: %04.3f ", runtime);
     fprintf(stdout, "(%3.3f GFlop => %6.2f MFlop/s)\n", 
